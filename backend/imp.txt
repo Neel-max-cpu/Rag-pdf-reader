@@ -1,0 +1,41 @@
+1) upgrade pip
+python -m pip install --upgrade pip setuptools wheel
+
+2) create virtual env
+python -m venv venv
+
+3) activate it
+venv\Scripts\activate
+- to deactivate - but only use when leaving
+deactivate
+-- to delete it
+rm -r -force venv
+
+4) to install dependencies from requirement.txt
+pip install -r requirements.txt
+
+-- to freeze dependencies
+pip freeze > requirements.txt
+
+-- current req :
+pip install fastapi uvicorn python-multipart pypdf chromadb google-generativeai python-dotenv
+fastapi → API
+uvicorn → server
+python-multipart → file upload
+pypdf → PDF parsing
+chromadb → vector DB
+google-generativeai → Gemini
+python-dotenv → env config (IMPORTANT for API keys)
+
+
+5) to run fast api (in venv)
+uvicorn app.main:app --reload
+
+6) http://localhost:8000/docs
+-- swagger auto build for apis
+7) http://localhost:8000/redoc
+ -- swagger auto build documentation for apis
+
+
+8) gemini api --
+https://aistudio.google.com/prompts/new_chat
