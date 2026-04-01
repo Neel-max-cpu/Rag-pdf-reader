@@ -1,5 +1,3 @@
-import uuid
-
 from google import  genai
 
 from app.core.config import GEMINI_API_KEY
@@ -55,7 +53,7 @@ def store_chunks(chunks, session_id):
     collection.add(
         documents=chunks,
         embeddings=embeddings,
-        ids=[f"{session_id}_chunk_{uuid.uuid4()}" for _ in chunks],
+        ids=[f"{session_id}_chunk_{i}" for i in range(len(chunks))],
         metadatas=[{"session_id": session_id} for _ in chunks]
     )
 
@@ -64,7 +62,7 @@ def query_chunks(question: str, session_id: str):
     # converts question string to embedding
     query_embedding = get_embedding(question)
 
-    # finds the top 5 result
+    # finds the top 3 result
     results = collection.query(
         query_embeddings = [query_embedding],
         n_results = 5,
@@ -78,18 +76,14 @@ def query_chunks(question: str, session_id: str):
 
 # generating answers ----
 def generate_answer(question: str, context_chunks: list):
-    if not context_chunks:
-        return "I could not find the answer in the document."
-
-    context = "\n\n".join(context_chunks[:5])
+    context = "\n\n".join(context_chunks)
 
     # only answer to the questions with the particular context --
     prompt = f"""
-    You are a precise document assistant.
+    You are a helpful assistant.
 
-    Answer ONLY from the provided context.
-    Do not hallucinate.
-    If unsure, say:    
+    Answer the question ONLY from the provided context.
+    If the answer is not in the context, say:
     "I could not find the answer in the document."
     
     Context: {context}
@@ -102,7 +96,7 @@ def generate_answer(question: str, context_chunks: list):
         contents=prompt,
     )
 
-    return response.text or "No response generated!"
+    return response.text
 
 # ask question
 def ask_question(question: str, session_id: str):

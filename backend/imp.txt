@@ -16,6 +16,7 @@ pip install -r requirements.txt
 
 -- to freeze dependencies
 pip freeze > requirements.txt
+pip freeze(prints them)
 
 -- current req :
 pip install fastapi uvicorn python-multipart pypdf chromadb google-generativeai python-dotenv

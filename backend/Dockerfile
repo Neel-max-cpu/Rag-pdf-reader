@@ -1,27 +1,16 @@
-# Stage 1: Build the jar using Maven
-FROM maven:3.9.2-eclipse-temurin-17 AS build
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy pom.xml and download dependencies (cached)
-COPY backend/pom.xml .
-RUN mvn dependency:go-offline
+# install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
-COPY backend/src ./src
+# copy app code
+COPY . .
 
-# Build jar (skip tests to speed up)
-RUN mvn clean package -DskipTests
+# expose port
+EXPOSE 8000
 
-# Stage 2: Run the jar using a smaller JDK
-FROM openjdk:17-jdk-slim
-WORKDIR /app
-
-# Copy jar from build stage
-COPY --from=build /app/target/*.jar app.jar
-
-# Expose port (Render will override with $PORT)
-EXPOSE 5001
-
-# Run app with Render's dynamic port
-ENTRYPOINT ["sh", "-c", "java -jar app.jar --server.port=${PORT}"]
+# run server
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

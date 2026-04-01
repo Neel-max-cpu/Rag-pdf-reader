@@ -19,6 +19,10 @@ __pycache__/
 # production
 /build
 
+
+# db
+chroma_db/
+
 # misc
 
 # debug
