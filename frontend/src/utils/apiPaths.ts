@@ -1,10 +1,9 @@
 import axiosInstance from "./axiosInstance";
 
-export const BASE_URL = process.env.NEXT_PUBLIC_API_URL
-
 export const API_PATHS={
     UPLOAD_PDF :"/api/upload-pdf",
     ASK_QUESTIONS: "/api/ask-question",
+    DELETE_SESSION: "/api/delete-session"
 }
 
 
@@ -26,10 +25,19 @@ export const uploadPdf = async(file:File)=>{
 };
 
 
-export const askQuestions = async (question:string)=>{
+export const askQuestions = async (question:string, session_id:string)=>{
     const res = await axiosInstance.post(
         API_PATHS.ASK_QUESTIONS,
-        {question}
+        {question, session_id}
     )
     return res?.data;
 };
+
+
+export const deleteSession = async (session_id:string)=>{
+    return axiosInstance.delete(`${API_PATHS.DELETE_SESSION}/${session_id}`);
+}
+
+export const deleteSessionSync = (session_id:string)=>{
+    return axiosInstance.delete(`${API_PATHS.DELETE_SESSION}/${session_id}`);
+}

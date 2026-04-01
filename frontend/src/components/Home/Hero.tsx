@@ -6,9 +6,10 @@ import { FileUp } from 'lucide-react'
 import { TbFileUploadFilled } from 'react-icons/tb'
 import { FaFileLines, FaGithub, FaHeadSideVirus, FaLinkedin } from 'react-icons/fa6'
 import { BsChatLeftTextFill } from 'react-icons/bs'
-import { uploadPdf } from '@/utils/apiPaths';
+import { deleteSession, uploadPdf } from '@/utils/apiPaths';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { LuMousePointerClick } from 'react-icons/lu';
 
 const Hero = () => {
   const image = "/images/p1.jpg"
@@ -26,6 +27,8 @@ const Hero = () => {
   const [file, setFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
 
   // move to upload section --
   const moveSection = () => {
@@ -42,16 +45,32 @@ const Hero = () => {
 
     setLoading(true);
 
+    // delete old session --
+    const oldSession = localStorage.getItem("sessionId");
+    if (oldSession) {
+      try {
+        await deleteSession(oldSession);
+        localStorage.removeItem("sessionId");
+        localStorage.removeItem("chatHistory");
+      } catch (error) {
+        console.log("error");
+      }
+    }
+
     await toast.promise(
       uploadPdf(selectedFile),
       {
         loading: "Uploading PDF...",
-        success: "File uploaded successfully! Redirecting 🚀",
+        success: "File uploaded successfully! Redirecting... 🚀",
         error: "Upload failed. Please try again.",
       }
     )
-      .then(() => {
-        router.push("/chat");
+      .then((res: any) => {
+        // save in local storage ---
+        localStorage.setItem("sessionId", res.session_id);
+        setTimeout(() => {
+          router.push("/chat");
+        }, 1000);
       })
       .catch((err) => {
         console.error(err);
@@ -60,6 +79,42 @@ const Hero = () => {
         setLoading(false);
       });
   }
+
+
+  // drag and drop
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (loading) return;
+    setIsDragging(false);
+
+    const droppedFile = e.dataTransfer.files[0];
+
+    if (droppedFile) {
+      setFile(droppedFile);
+      handleUpload(droppedFile);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (loading) return;
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (loading) return;
+
+    const selectedFile = e.target.files?.[0];
+
+    if (selectedFile) {
+      setFile(selectedFile);
+      handleUpload(selectedFile);
+    }
+  };
 
 
   return (
@@ -102,17 +157,64 @@ const Hero = () => {
             <p className="text-center text-gray-500 mb-10">Maximum file size: 50MB. Supports PDF.</p>
           </div>
           {/* pdf upload part */}
-          <div className="flex flex-col w-full lg:w-200 bg-white p-20 rounded-lg items-center justify-center">
-            <div className="bg-blue-200 rounded-lg p-5 mb-5">
-              <TbFileUploadFilled className="text-blue-900 stroke-current w-10 h-10" />
+          <div
+            onClick={() => !loading && inputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            // className="flex flex-col w-full lg:w-200 bg-white p-20 rounded-lg items-center justify-center"
+            className={`flex flex-col w-full lg:w-200 bg-white p-20 rounded-lg items-center justify-center border-2 border-dashed transition-all duration-200
+              ${loading ? "opacity-70 cursor-not-allowed"
+                : isDragging ? "border-blue-500 bg-blue-200! scale-[1.02]"
+                  : "border-gray-300 hover:border-blue-500 cursor-pointer"}
+            `}
+          >
+            <div className={`rounded-lg p-5 mb-5 transition-all duration-200 ${isDragging ? "bg-white" : "bg-blue-200"}`}>
+              {isDragging ?
+                <LuMousePointerClick className="text-blue-900 stroke-current w-10 h-10" />
+                : <TbFileUploadFilled className="text-blue-900 stroke-current w-10 h-10" />}
             </div>
-            <h1 className="font-medium">Drag and drop your PDF here</h1>
-            <span className="text-gray-500 text-sm font-medium mb-10">or click to browse your local workspace</span>
-            <button 
+            <h1 className="font-medium">
+              {isDragging ? "Drop your PDF here" : "Drag and drop your PDF here"}
+            </h1>
+            {isDragging ? (<span className="text-gray-500 text-sm font-medium mb-15"></span>) :
+              (<span className="text-gray-500 text-sm font-medium mb-10">or click to browse your local workspace</span>)
+            }
+            <button
               disabled={loading}
-              className="hover-button p-4 bg-blue-900 rounded-lg font-medium text-white shadow-lg hover:bg-linear-to-r from-purple-500 via-fuchsia-700 to-purple-900 hover:cursor-pointer">
-              <span className="">Upload PDF</span>
+              onClick={(e) => {
+                e.stopPropagation();
+                inputRef.current?.click();
+              }}
+              className={`p-4  rounded-lg font-medium text-white shadow-lg
+                ${loading ? "bg-blue-900 opacity-70" : "hover-button bg-blue-900 hover:bg-linear-to-r from-purple-500 via-fuchsia-700 to-purple-900 hover:cursor-pointer"}
+              `}
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Uploading...
+                </div>
+              ) : (
+                "Upload PDF"
+              )}
             </button>
+
+            {/* file name */}
+            {file && (
+              <p className="mt-3 text-sm text-gray-600">
+                {file.name}
+              </p>
+            )}
+
+            {/* input */}
+            <input
+              ref={inputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={handleFileChange}
+            />
           </div>
         </div>
       </div>

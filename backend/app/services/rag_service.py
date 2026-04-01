@@ -1,3 +1,5 @@
+import uuid
+
 from google import  genai
 
 from app.core.config import GEMINI_API_KEY
@@ -27,9 +29,7 @@ def get_embedding(text: str):
 
 
 # looping through the chunks (chunks = small part of the PDFs)
-def store_chunks(chunks):
-    # clear old data
-    collection.delete(where={"id": {"$ne": ""}})
+def store_chunks(chunks, session_id):
 
     # for i, chunk in enumerate(chunks):
     #     # convert chunks to embedding
@@ -43,36 +43,53 @@ def store_chunks(chunks):
 
     # get all batch embedding in one call --
     embeddings = get_embedding_batch(chunks)
-    for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-        collection.add(
-            documents=[chunk],
-            embeddings=[embedding],
-            ids=[f"chunk_{i}"]
-        )
+    # for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+    #     collection.add(
+    #         documents=[chunk],
+    #         embeddings=[embedding],
+    #         ids=[f"{session_id}_chunk_{i}"],
+    #         metadatas=[{"session_id": session_id}]
+    #     )
+
+    # better than above one ---
+    collection.add(
+        documents=chunks,
+        embeddings=embeddings,
+        ids=[f"{session_id}_chunk_{uuid.uuid4()}" for _ in chunks],
+        metadatas=[{"session_id": session_id} for _ in chunks]
+    )
 
 # validating query ---
-def query_chunks(question: str):
+def query_chunks(question: str, session_id: str):
     # converts question string to embedding
     query_embedding = get_embedding(question)
 
-    # finds the top 3 result
+    # finds the top 5 result
     results = collection.query(
         query_embeddings = [query_embedding],
-        n_results = 5
+        n_results = 5,
+        where={"session_id": session_id}
     )
-    return results["documents"][0]
+    docs = results["documents"][0]
+    if not docs or not docs[0]:
+        return []
+    return docs[0]
 
 
 # generating answers ----
 def generate_answer(question: str, context_chunks: list):
-    context = "\n\n".join(context_chunks)
+    if not context_chunks:
+        return "I could not find the answer in the document."
+
+    context = "\n\n".join(context_chunks[:5])
 
     # only answer to the questions with the particular context --
     prompt = f"""
-    You are a helpful assistant.
+    You are a precise document assistant.
 
-    Answer the question ONLY from the provided context.
-    If the answer is not in the context, say:
+    Answer ONLY from the provided context.
+    Do not hallucinate.
+    If unsure, say:    
     "I could not find the answer in the document."
     
     Context: {context}
@@ -85,11 +102,11 @@ def generate_answer(question: str, context_chunks: list):
         contents=prompt,
     )
 
-    return response.text
+    return response.text or "No response generated!"
 
 # ask question
-def ask_question(question: str):
-    chunks = query_chunks(question)
+def ask_question(question: str, session_id: str):
+    chunks = query_chunks(question, session_id)
     answer = generate_answer(question, chunks)
 
     return {
