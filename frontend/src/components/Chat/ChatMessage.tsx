@@ -12,26 +12,35 @@ const ChatMessage = ({ messages }: { messages: Message[] }) => {
 
   // typing ---
   const TypingText = ({ text }: { text: string }) => {
-    const [displayed, setDisplayed] = useState("");
-    useEffect(() => {
-      let i = 0;
+    const [index, setIndex] = useState(0);
 
-      // adding a slight delay
+    useEffect(() => {
+      setIndex(0);
+
       const timeout = setTimeout(() => {
         const interval = setInterval(() => {
-          setDisplayed((prev) => prev + text.charAt(i));
-          i++;
-
-          if (i >= text.length) clearInterval(interval);
+          setIndex((prev) => {
+            if (prev >= text.length) {
+              clearInterval(interval);
+              return prev;
+            }
+            return prev + 1;
+          });
         }, 15);
+
         return () => clearInterval(interval);
       }, 300);
 
-      return ()=>clearTimeout(timeout);
+      return () => clearTimeout(timeout);
     }, [text]);
 
-    return <span>{displayed}</span>
-  }
+    return (
+      <span>
+        {text.slice(0, index)}
+        <span className="animate-pulse">|</span>
+      </span>
+    );
+  };
 
   return (
     <div className="h-full flex flex-col p-3 md:px-20">
@@ -58,7 +67,7 @@ const ChatMessage = ({ messages }: { messages: Message[] }) => {
                 ) : (
                   // when the message is loaded keep it static ---
                   <video
-                    key={isLastBot? "active" : "idle"}
+                    key={isLastBot ? "active" : "idle"}
                     className="w-10 h-10"
                     loop muted
                     autoPlay={isLastBot}
