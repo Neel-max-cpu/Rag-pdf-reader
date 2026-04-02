@@ -1,6 +1,6 @@
 # ✨ PDF Reader RAG MODEL✨
 
-## Check the video for the brief of the project without running here  -> [Link]() ⭐
+## Check the video for the brief of the project without running here  -> [Link](https://youtu.be/-dRzgm8xRhs) ⭐
 ## Deployed Link  -> [Link](https://rag-pdf-reader.vercel.app/) ⭐
 
 ![Demo App Image 1](/frontend/public/readMeImg/1.png)
